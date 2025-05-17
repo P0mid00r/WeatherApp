@@ -2,13 +2,14 @@ package ru.pomidorka.weatherapp.core.weatherapi
 
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import ru.pomidorka.weatherapp.BuildConfig
 import java.security.cert.X509Certificate
 import javax.net.ssl.SSLContext
 import javax.net.ssl.SSLSocketFactory
 import javax.net.ssl.X509TrustManager
 
 object GismetioControllerNew {
-    private const val gismetioToken: String = "6414437a017a35.91123853"
+    private const val gismetioToken = BuildConfig.GISMETIO_API_TOKEN
     private const val gismetioBaseUrl: String = "https://api.gismeteo.net/v2/weather/"
 
     private fun getClient(): OkHttpClient {

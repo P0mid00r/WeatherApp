@@ -16,7 +16,6 @@ import ru.pomidorka.weatherapp.ui.screens.SelectorCityScreen
 import ru.pomidorka.weatherapp.ui.theme.WeatherAppTheme
 
 class MainActivity : ComponentActivity() {
-
     private companion object {
         lateinit var viewModel: WeatherViewModel
     }

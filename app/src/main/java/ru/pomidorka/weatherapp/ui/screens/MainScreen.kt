@@ -10,6 +10,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -18,10 +22,13 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
+import kotlinx.coroutines.launch
+import ru.pomidorka.weatherapp.core.weatherapi.openmeteo.OpenMeteoApiController
 import ru.pomidorka.weatherapp.data.WeatherToday
 import ru.pomidorka.weatherapp.data.WeatherViewModel
 import ru.pomidorka.weatherapp.ui.components.CurrentTemperatureView
 import ru.pomidorka.weatherapp.ui.components.SelectorCity
+import ru.pomidorka.weatherapp.ui.components.WeatherChart
 import ru.pomidorka.weatherapp.ui.components.WeatherTodayLazyRow
 import ru.pomidorka.weatherapp.util.Date
 import java.time.LocalDate
@@ -37,7 +44,7 @@ fun MainScreen(
     modifier: Modifier = Modifier,
     viewModel: WeatherViewModel = viewModel(),
     navController: NavController = rememberNavController()
-    ) {
+) {
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -60,12 +67,17 @@ fun MainScreen(
                 .background(MaterialTheme.colorScheme.primary)
         ) {
             var data = viewModel.currentWeather?.current
+
             SelectorCity(
                 modifier = modifier.padding(25.dp, 0.dp),
                 selectedCity = viewModel.selectedCity,
                 navController = navController,
             )
             CurrentTemperatureView(data?.temp_c ?: 0.0, 0,0)
+        }
+
+        Column(modifier.padding(15.dp, 5.dp, 15.dp, 0.dp)) {
+            WeatherChart(viewModel.values, modifier)
         }
 
         viewModel.forecast?.let {
