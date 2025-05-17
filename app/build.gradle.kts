@@ -1,10 +1,10 @@
-import org.jetbrains.kotlin.gradle.utils.loadPropertyFromResources
 import java.util.Properties
 
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.compose.compiler)
+    id("com.google.devtools.ksp")
 }
 
 android {
@@ -71,6 +71,11 @@ android {
 }
 
 dependencies {
+
+    implementation("androidx.room:room-runtime:2.7.1")
+    ksp("androidx.room:room-compiler:2.7.1")
+
+    implementation("io.github.ehsannarmani:compose-charts:0.1.7")
 
     implementation(libs.retrofit)
     implementation(libs.converter.gson)
