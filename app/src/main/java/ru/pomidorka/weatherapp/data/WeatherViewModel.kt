@@ -1,9 +1,9 @@
 package ru.pomidorka.weatherapp.data
 
 import android.content.Context
+import android.location.Location
 import android.os.Handler
 import android.os.Looper
-import android.util.Log
 import android.widget.Toast
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
@@ -17,13 +17,20 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
-import ru.pomidorka.weatherapp.core.weatherapi.openmeteo.OpenMeteoApiController
-import ru.pomidorka.weatherapp.core.weatherapi.WeatherApiController
+import okio.IOException
+import ru.pomidorka.weatherapp.core.api.openmeteo.OpenMeteoApiController
+import ru.pomidorka.weatherapp.core.api.weatherapi.WeatherApiController
+import ru.pomidorka.weatherapp.core.api.openmeteo.entity.minutely.Minutely15
 import ru.pomidorka.weatherapp.data.database.AppDatabase
-import ru.pomidorka.weatherapp.data.entity.weatherapi.current.SearchData
-import ru.pomidorka.weatherapp.data.entity.weatherapi.current.WeatherApiData
-import ru.pomidorka.weatherapp.data.entity.weatherapi.forecast.ForecastData
+import ru.pomidorka.weatherapp.data.database.entity.CityData
+import ru.pomidorka.weatherapp.core.api.weatherapi.entity.current.SearchData
+import ru.pomidorka.weatherapp.core.api.weatherapi.entity.current.WeatherApiData
+import ru.pomidorka.weatherapp.core.api.weatherapi.entity.current.convertToCityData
+import ru.pomidorka.weatherapp.core.api.weatherapi.entity.forecast.ForecastData
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 
 class WeatherViewModel(val applicationContext: Context) : ViewModel() {
     private val db = Room.databaseBuilder(
@@ -32,84 +39,168 @@ class WeatherViewModel(val applicationContext: Context) : ViewModel() {
         "weatherAppDb"
     ).build()
 
+    var location by mutableStateOf<Location?>(null)
+
+    var isLoadingData by mutableStateOf(true)
+        private set
+
     var currentWeather: WeatherApiData? by mutableStateOf(null)
+        private set
     var forecast: ForecastData? by mutableStateOf(null)
+        private set
 
     var selectedCity: SearchData? by mutableStateOf(null)
+        private set
     var favoritesCity = mutableStateListOf<SearchData>()
+        private set
 
-    var values = mutableStateListOf<Double>()
+    var temperatureValues = mutableStateListOf<Double>()
+        private set
+    var timeValues = mutableStateListOf<String>()
+        private set
 
     private var jobUpdaterWeatherInfo: Job? = null
 
-    init {
-        favoritesCity.addAll(listOf(
-            SearchData(1, "Барнаул", "Алтайский край", "Россия", 53.36f, 83.75f,""),
-            SearchData(2, "Новоалтайск", "Алтайский край", "Россия", 123f,123f,""),
-            SearchData(3, "Новосибирск", "123456789098765432101234567890123", "Россия", 123f,123f,""),
-            SearchData(4, "Москва", "123", "Россия", 123f,123f,""),
-            SearchData(5, "Санкт-Петербург", "123", "Россия", 123f,123f,""),
-            SearchData(6, "Екатеринбург", "123", "Россия", 123f,123f,""),
-        ))
+    fun loadWeatherInfo() {
+        isLoadingData = true
+        viewModelScope.launch {
+            async(Dispatchers.IO) {
+                if (selectedCity == null) {
+                    if (db.cityDataDao().count() == 0) {
+                        db.cityDataDao().addCity(
+                            CityData(1, "Барнаул", "Алтайский край", "Россия", 53.36f, 83.75f,"")
+                        )
+                    }
+
+                    val cities = db.cityDataDao().getCities()
+                    val searchDataes = mutableListOf<SearchData>()
+
+                    cities.forEach {
+                        searchDataes.add(SearchData(it.id, it.name, it.region, it.country, it.lat, it.lon, it.url))
+                    }
+
+                    favoritesCity.addAll(searchDataes)
+
+                    selectedCity = favoritesCity[0]
+                }
+            }.await()
+
+            val job1 = launch(Dispatchers.IO) {
+                temperatureValues.clear()
+                timeValues.clear()
+
+                try {
+                    val response = OpenMeteoApiController.openMeteoApi.getForecastOfDays(
+                        latitude = selectedCity?.lat.toString(),
+                        longitude = selectedCity?.lon.toString(),
+                        forecastDays = 2
+                    )
+
+                    when(response.isSuccessful) {
+                        true -> {
+                            response.body()?.minutely_15?.let {
+                                val currentDateTime = LocalDateTime.now()
+                                val timeFirstIndex = it.time.indexOfFirst {
+                                    it.contains("${"%02d".format(currentDateTime.hour)}:00")
+                                }
+                                val timeLastIndex = it.time.indexOfLast {
+                                    it.contains("${"%02d".format(currentDateTime.hour)}:00")
+                                }
+
+                                for (i in 0..it.time.count() - 1) {
+                                    if (i >= timeFirstIndex && i <= timeLastIndex) {
+                                        val dateTime = LocalDateTime.parse(it.time[i])
+
+                                        temperatureValues.add(listOf(it.temperature_2m[i], it.apparent_temperature[i]).average())
+                                        val dateTimeString = dateTime.format(DateTimeFormatter.ofPattern("dd.MM"))
+                                        timeValues.add("$dateTimeString ${"%02d".format(dateTime.hour)}:${"%02d".format(dateTime.minute)}")
+                                    }
+                                }
+                            }
+                        }
+                        false -> {
+                            Handler(Looper.getMainLooper()).post {
+                                Toast.makeText(applicationContext, response.errorBody()?.string(), Toast.LENGTH_LONG).show()
+                            }
+                        }
+                    }
+                } catch (ex: IOException) {
+                    Handler(Looper.getMainLooper()).post {
+                        Toast.makeText(applicationContext, "Ошибка при получении данных с open-meteo", Toast.LENGTH_LONG).show()
+                    }
+                }
+            }
+            val job2 = launch(Dispatchers.IO) {
+                try {
+                    val response = WeatherApiController.weatherApi.getCurrentWeather(
+                        WeatherApiController.TOKEN,
+                        selectedCity?.name ?: "Барнаул",
+                        "yes"
+                    )
+
+                    when(response.isSuccessful) {
+                        true -> currentWeather = response.body()
+                        false -> {
+                            Handler(Looper.getMainLooper()).post {
+                                Toast.makeText(applicationContext, response.errorBody()?.string(), Toast.LENGTH_LONG).show()
+                            }
+                        }
+                    }
+                } catch (ex: IOException) {
+                    Handler(Looper.getMainLooper()).post {
+                        Toast.makeText(applicationContext, "Ошибка при получении данных с weatherapi", Toast.LENGTH_LONG).show()
+                    }
+                }
+            }
+            val job3 = launch(Dispatchers.IO) {
+                try {
+                    val response = WeatherApiController.weatherApi.getForecastWeather(
+                        WeatherApiController.TOKEN,
+                        selectedCity?.name ?: "Барнаул",
+                        10,
+                        "yes",
+                    )
+
+                    when(response.isSuccessful) {
+                        true -> forecast = response.body()
+                        false -> {
+                            Handler(Looper.getMainLooper()).post {
+                                Toast.makeText(applicationContext, response.errorBody()?.string(), Toast.LENGTH_LONG).show()
+                            }
+                        }
+                    }
+                } catch (ex: IOException) {
+                    Handler(Looper.getMainLooper()).post {
+                        Toast.makeText(applicationContext, "Ошибка при получении данных с weatherapi", Toast.LENGTH_LONG).show()
+                    }
+                }
+            }
+
+            joinAll(job1, job2, job3)
+            isLoadingData = false
+        }
     }
 
-    fun loadWeatherInfo() {
-        if (selectedCity == null) {
-            selectedCity = favoritesCity[0]
+    fun addCityToFavorites(searchData: SearchData) {
+        viewModelScope.launch(Dispatchers.IO) {
+            searchData.let {
+                favoritesCity.add(it)
+
+                db.cityDataDao().addCity(
+                    it.convertToCityData()
+                )
+            }
         }
+    }
 
-        viewModelScope.launch {
-            launch(Dispatchers.IO) {
-                values.clear()
-                val response = OpenMeteoApiController.openMeteoApi.getForecast(
-                    latitude = selectedCity?.lat.toString(),
-                    longitude = selectedCity?.lon.toString(),
-                    forecastDays = 1
+    fun removeFavoritesCity(searchData: SearchData) {
+        viewModelScope.launch(Dispatchers.IO) {
+            searchData.let {
+                favoritesCity.remove(it)
+
+                db.cityDataDao().deleteCity(
+                    it.convertToCityData()
                 )
-
-                when(response.isSuccessful) {
-                    true -> {
-                        response.body()?.hourly?.temperature_2m?.forEach { values.add(it) }
-                    }
-                    false -> {
-                        Handler(Looper.getMainLooper()).post {
-                            Toast.makeText(applicationContext, response.errorBody()?.string(), Toast.LENGTH_LONG).show()
-                        }
-                    }
-                }
-            }
-            launch(Dispatchers.IO) {
-                val response = WeatherApiController.weatherApi.getCurrentWeather(
-                    WeatherApiController.TOKEN,
-                    selectedCity?.name ?: "Барнаул",
-                    "yes"
-                )
-
-                when(response.isSuccessful) {
-                    true -> currentWeather = response.body()
-                    false -> {
-                        Handler(Looper.getMainLooper()).post {
-                            Toast.makeText(applicationContext, response.errorBody()?.string(), Toast.LENGTH_LONG).show()
-                        }
-                    }
-                }
-            }
-            launch(Dispatchers.IO) {
-                val response = WeatherApiController.weatherApi.getForecastWeather(
-                    WeatherApiController.TOKEN,
-                    selectedCity?.name ?: "Барнаул",
-                    10,
-                    "yes",
-                )
-
-                when(response.isSuccessful) {
-                    true -> forecast = response.body()
-                    false -> {
-                        Handler(Looper.getMainLooper()).post {
-                            Toast.makeText(applicationContext, response.errorBody()?.string(), Toast.LENGTH_LONG).show()
-                        }
-                    }
-                }
             }
         }
     }
@@ -124,7 +215,7 @@ class WeatherViewModel(val applicationContext: Context) : ViewModel() {
             jobUpdaterWeatherInfo ?: viewModelScope.launch {
                 while (isActive) {
                     loadWeatherInfo()
-                    delay(10000)
+                    delay(100000)
                 }
             }
         } else {
@@ -134,13 +225,44 @@ class WeatherViewModel(val applicationContext: Context) : ViewModel() {
     }
 
     suspend fun searchCities(query: String): List<SearchData>? {
-        return viewModelScope.async {
+        return viewModelScope.async(Dispatchers.IO) {
             val response = WeatherApiController.weatherApi.search(
                 WeatherApiController.TOKEN,
                 query
             )
 
             return@async response.body()
+        }.await()
+    }
+
+    suspend fun getWeathersOfDates(
+        startDate: String,
+        endDate: String
+    ): Minutely15? {
+       return viewModelScope.async {
+            return@async try {
+                val response = OpenMeteoApiController.openMeteoApi.getForecastOfDates(
+                    latitude = selectedCity?.lat.toString(),
+                    longitude = selectedCity?.lon.toString(),
+                    startDate = startDate,
+                    endDate = endDate
+                )
+
+                return@async when(response.isSuccessful) {
+                    true -> {
+                        response.body()?.minutely_15
+                    }
+                    false -> {
+                        Handler(Looper.getMainLooper()).post {
+                            Toast.makeText(applicationContext, "Ошибка при получении данных с open-meteo", Toast.LENGTH_LONG).show()
+                        }
+
+                        null
+                    }
+                }
+            } catch (ex: IOException) {
+                null
+            }
         }.await()
     }
 }

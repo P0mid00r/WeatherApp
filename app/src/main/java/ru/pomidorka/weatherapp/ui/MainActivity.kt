@@ -11,9 +11,11 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import ru.pomidorka.weatherapp.data.WeatherViewModel
+import ru.pomidorka.weatherapp.ui.screens.InfoScreen
 import ru.pomidorka.weatherapp.ui.screens.MainScreen
 import ru.pomidorka.weatherapp.ui.screens.SelectorCityScreen
 import ru.pomidorka.weatherapp.ui.theme.WeatherAppTheme
+import ru.pomidorka.weatherapp.util.rememberCurrentLocation
 
 class MainActivity : ComponentActivity() {
     private companion object {
@@ -22,11 +24,13 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-//        enableEdgeToEdge()
+        enableEdgeToEdge()
 
+        viewModel = WeatherViewModel(applicationContext)
         setContent {
             val navController = rememberNavController()
-            viewModel = WeatherViewModel(applicationContext)
+//            rememberCurrentLocation()
+
             LaunchedEffect(Unit) {
                 viewModel.loadWeatherInfo()
                 viewModel.setEnabledUpdaterWeatherInfo(false)
@@ -42,6 +46,11 @@ class MainActivity : ComponentActivity() {
                     composable(Routes.SelectorCityScreen.route) {
                         Surface(color = MaterialTheme.colorScheme.background) {
                             SelectorCityScreen(viewModel = viewModel, navController = navController)
+                        }
+                    }
+                    composable(Routes.InfoScreen.route) {
+                        Surface {
+                            InfoScreen()
                         }
                     }
                 }

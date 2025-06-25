@@ -4,7 +4,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.compose.compiler)
-    id("com.google.devtools.ksp")
+    alias(libs.plugins.ksp)
 }
 
 android {
@@ -56,6 +56,9 @@ android {
     kotlinOptions {
         jvmTarget = "1.8"
     }
+    ksp {
+
+    }
     buildFeatures {
         buildConfig = true
         compose = true
@@ -71,22 +74,30 @@ android {
 }
 
 dependencies {
-
-    implementation("androidx.room:room-runtime:2.7.1")
-    ksp("androidx.room:room-compiler:2.7.1")
-
-    implementation("io.github.ehsannarmani:compose-charts:0.1.7")
-
-    implementation(libs.retrofit)
-    implementation(libs.converter.gson)
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
     implementation("androidx.compose.material3:material3:1.4.0-alpha06")
     implementation("androidx.compose.material:material-icons-extended:1.6.8")
+
+    // База данных
+    implementation(libs.room.runtime)
+    implementation(libs.room.ktx)
+    ksp(libs.room.compiler)
+
+    // Графики
+    implementation("io.github.ehsannarmani:compose-charts:0.1.7")
+
+    // Работа с сетью
+    implementation(libs.retrofit)
+    implementation(libs.converter.gson)
+
+    // Навигация
     implementation("androidx.navigation:navigation-compose:2.8.1")
 
+    // Загрузка картинок
     implementation("io.coil-kt.coil3:coil-compose:3.1.0")
     implementation("io.coil-kt.coil3:coil-network-okhttp:3.1.0")
 
+    // Интерфейс
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)

@@ -17,7 +17,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
-import ru.pomidorka.weatherapp.data.entity.weatherapi.current.SearchData
+import ru.pomidorka.weatherapp.core.api.weatherapi.entity.current.SearchData
 import ru.pomidorka.weatherapp.ui.Routes
 
 @Composable
@@ -30,7 +30,7 @@ fun SelectorCity(
         modifier = modifier.fillMaxWidth()
     ) {
         OutlinedButton(
-            modifier = modifier
+            modifier = Modifier
                 .align(alignment = Alignment.CenterStart)
                 .background(Color.Transparent),
             border = BorderStroke(0.dp, Color.Transparent),
@@ -46,8 +46,9 @@ fun SelectorCity(
         }
         Text(
             color = MaterialTheme.colorScheme.onPrimary,
-            modifier = modifier.align(alignment = Alignment.Center),
+            modifier = Modifier.align(alignment = Alignment.Center),
             text = selectedCity?.name ?: "CityName",
+            style = MaterialTheme.typography.titleLarge
         )
     }
 }

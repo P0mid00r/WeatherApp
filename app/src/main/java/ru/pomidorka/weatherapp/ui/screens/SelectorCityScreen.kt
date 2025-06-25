@@ -50,7 +50,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
@@ -58,16 +57,9 @@ import androidx.navigation.compose.rememberNavController
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import ru.pomidorka.weatherapp.data.WeatherViewModel
-import ru.pomidorka.weatherapp.data.entity.weatherapi.current.SearchData
+import ru.pomidorka.weatherapp.core.api.weatherapi.entity.current.SearchData
 import ru.pomidorka.weatherapp.ui.Routes
 
-@Preview(showBackground = true)
-@Composable
-private fun SelectorCityScreenPreview(modifier: Modifier = Modifier) {
-    SelectorCityScreen()
-}
-
-@Preview()
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SelectorCityScreen(
@@ -75,13 +67,13 @@ fun SelectorCityScreen(
     viewModel: WeatherViewModel = viewModel(),
     navController: NavController = rememberNavController(),
 ) {
+    val scope = rememberCoroutineScope()
     var isExpanded by remember { mutableStateOf(false) }
     val textFieldState = rememberTextFieldState()
     var searchData: List<SearchData>? by remember { mutableStateOf(null) }
-    val scope = rememberCoroutineScope()
 
     val animatedPadding by animateDpAsState(
-        if (isExpanded) { 0.dp } else { 25.dp },
+        if (isExpanded) 0.dp else 25.dp,
         label = "padding"
     )
 
@@ -167,12 +159,11 @@ fun SelectorCityScreen(
                                 ListItem(
                                     headlineContent = { Text(cityName) },
                                     supportingContent = { Text("${item.country}, ${item.region}") },
-//                                leadingContent = { Icon(Icons.Filled.Star, contentDescription = null) },
                                     leadingContent = { Icon(Icons.Filled.LocationCity, contentDescription = null) },
                                     colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                                     modifier = Modifier.clickable {
                                         textFieldState.clearText()
-                                        viewModel.favoritesCity.add(item)
+                                        viewModel.addCityToFavorites(item)
                                         searchData = emptyList()
                                         isExpanded = false
                                     }
@@ -197,7 +188,6 @@ fun SelectorCityScreen(
             }
         }
     }
-
 }
 
 @Composable
@@ -267,16 +257,14 @@ private fun RowFavoriteCityName(
                 )
             }
 
-            Row(
-                horizontalArrangement = Arrangement.End
-            ) {
+            Row(horizontalArrangement = Arrangement.End) {
                 IconButton(
                     modifier = modifier.width(50.dp),
                     onClick = {
                         scope.launch {
                             isRemove = true
                             delay(500)
-                            viewModel.favoritesCity.remove(searchData)
+                            viewModel.removeFavoritesCity(searchData)
                         }
                     }
                 ) {
