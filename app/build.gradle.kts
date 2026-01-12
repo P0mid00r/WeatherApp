@@ -1,20 +1,48 @@
 import java.util.Properties
 
+fun loadProperties(): Properties {
+    val localPropertiesFile = project.rootProject.file("local.properties")
+    val properties = Properties()
+    properties.load(localPropertiesFile.inputStream())
+
+    return properties
+}
+
+val localProperties = loadProperties()
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.compose.compiler)
     alias(libs.plugins.ksp)
+    id("ru.ok.tracer").version("1.1.7")
+    id("org.jetbrains.kotlin.plugin.serialization") version "2.2.21"
+}
+
+tracer {
+    create("defaultConfig") {
+        pluginToken = localProperties.getProperty("pluginTokenTracer")
+        appToken = localProperties.getProperty("appTokenTracer")
+
+        uploadMapping = true
+        uploadNativeSymbols = true
+    }
+
+    create("debug") {
+        uploadMapping = false
+        uploadNativeSymbols = false
+        isDisabled = true
+    }
 }
 
 android {
     namespace = "ru.pomidorka.weatherapp"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "ru.pomidorka.weatherapp"
         minSdk = 26
-        targetSdk = 35
+        targetSdk = 36
         versionCode = 1
         versionName = "1.0"
 
@@ -23,26 +51,23 @@ android {
             useSupportLibrary = true
         }
 
-        val localPropertiesFile = project.rootProject.file("local.properties")
-        val properties = Properties()
-        properties.load(localPropertiesFile.inputStream())
-
         buildConfigField(
             type = "String",
             name = "WEATHER_API_TOKEN",
-            value = properties.getProperty("weatherApiToken")
+            value = localProperties.getProperty("weatherApiToken")
         )
 
         buildConfigField(
             type = "String",
             name = "GISMETIO_API_TOKEN",
-            value = properties.getProperty("gismetioApiToken")
+            value = localProperties.getProperty("gismetioApiToken")
         )
     }
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -74,28 +99,28 @@ android {
 }
 
 dependencies {
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
-    implementation("androidx.compose.material3:material3:1.4.0-alpha06")
-    implementation("androidx.compose.material:material-icons-extended:1.6.8")
+    implementation(libs.kotlinx.serialization.json)
 
-    // База данных
-    implementation(libs.room.runtime)
-    implementation(libs.room.ktx)
-    ksp(libs.room.compiler)
+    implementation(platform(libs.tracer.platform))
+    implementation(libs.tracer.crash.report)
+
+    implementation(libs.lifecycle.viewmodel.compose)
+    implementation("androidx.compose.material3:material3:1.5.0-alpha09")
+    implementation(libs.androidx.material.icons.extended)
 
     // Графики
-    implementation("io.github.ehsannarmani:compose-charts:0.1.7")
+    implementation(libs.compose.charts)
 
     // Работа с сетью
     implementation(libs.retrofit)
     implementation(libs.converter.gson)
 
     // Навигация
-    implementation("androidx.navigation:navigation-compose:2.8.1")
+    implementation(libs.androidx.navigation.compose)
 
     // Загрузка картинок
-    implementation("io.coil-kt.coil3:coil-compose:3.1.0")
-    implementation("io.coil-kt.coil3:coil-network-okhttp:3.1.0")
+    implementation(libs.coil.compose)
+    implementation(libs.coil.network.okhttp)
 
     // Интерфейс
     implementation(libs.androidx.core.ktx)

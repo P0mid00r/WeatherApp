@@ -8,47 +8,61 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
-import ru.pomidorka.weatherapp.core.api.weatherapi.entity.WeatherToday
+import ru.pomidorka.weatherapp.core.api.openmeteo.entity.skipDays
+import ru.pomidorka.weatherapp.core.api.openmeteo.entity.toWeatherForDayList
 import ru.pomidorka.weatherapp.data.WeatherViewModel
+import ru.pomidorka.weatherapp.ui.Routes
 import ru.pomidorka.weatherapp.ui.components.SimpleLoadingIndicator
 import ru.pomidorka.weatherapp.ui.components.CurrentTemperatureView
 import ru.pomidorka.weatherapp.ui.components.SelectorCity
 import ru.pomidorka.weatherapp.ui.components.WeatherChart
-import ru.pomidorka.weatherapp.ui.components.WeatherTodayLazyRows
-import java.time.LocalDate
+import ru.pomidorka.weatherapp.ui.components.WeatherForDayLazyRows
 
 @Preview(showBackground = true)
 @Composable
-fun MainScreenPreview(modifier: Modifier = Modifier) {
-    MainScreen()
+fun MainScreenPreview() {
+    MainScreen(
+        viewModel = viewModel(),
+        navController = rememberNavController()
+    )
 }
 
 @Composable
 fun MainScreen(
+    viewModel: WeatherViewModel,
+    navController: NavController,
     modifier: Modifier = Modifier,
-    viewModel: WeatherViewModel = viewModel(),
-    navController: NavController = rememberNavController()
 ) {
     val scrollState = rememberScrollState()
+    val state by viewModel.mainScreenState.collectAsState()
+    var currentWeather = state.currentWeather
 
-    Column(modifier = modifier.fillMaxSize()) {
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+            .verticalScroll(scrollState)
+    ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
@@ -65,30 +79,33 @@ fun MainScreen(
                 .height(200.dp)
                 .background(MaterialTheme.colorScheme.primary)
         ) {
-            var data = viewModel.currentWeather?.current
-
             SelectorCity(
-                modifier = modifier.padding(25.dp, 0.dp),
-                selectedCity = viewModel.selectedCity,
-                navController = navController,
+                modifier = modifier
+                    .statusBarsPadding()
+                    .padding(25.dp, 0.dp),
+                selectedCity = state.selectedCity,
+                onButtonClick = {
+                    navController.navigate(Routes.SelectorCityScreen)
+                }
             )
-            AnimatedContent(targetState = viewModel.isLoadingData) {
+            AnimatedContent(targetState = state.isLoadingData) {
                 when(it) {
                     true -> SimpleLoadingIndicator(
-                        modifier = modifier.size(70.dp),
-                        color = MaterialTheme.colorScheme.onPrimary
+                        modifier = modifier,
+                        size = DpSize(70.dp, 70.dp),
+                        color = MaterialTheme.colorScheme.onPrimary,
                     )
                     false -> CurrentTemperatureView(
-                        currentTemperature = data?.temp_c ?: 0.0,
-                        temperatureMax = viewModel.forecast?.forecast?.forecastday[0]?.day?.maxtemp_c ?: 0.0,
-                        temperatureMin = viewModel.forecast?.forecast?.forecastday[0]?.day?.mintemp_c ?: 0.0,
-                        data?.condition?.text ?: "Ясно"
+                        currentTemperature = currentWeather?.temperature ?: 0.0f,
+                        temperatureMax = currentWeather?.temperatureMax ?: 0.0f,
+                        temperatureMin = currentWeather?.temperatureMin ?: 0.0f,
+                        condition = currentWeather?.condition ?: "null"
                     )
                 }
             }
         }
 
-        AnimatedContent(targetState = viewModel.isLoadingData) {
+        AnimatedContent(targetState = state.isLoadingData) {
             if (it) {
                 Box(
                     modifier
@@ -96,47 +113,41 @@ fun MainScreen(
                         .fillMaxSize()
                 ) {
                     SimpleLoadingIndicator(
+                        modifier = modifier.align(Alignment.Center),
+                        size = DpSize(100.dp, 100.dp),
                         color = MaterialTheme.colorScheme.onBackground,
-                        modifier = modifier.size(100.dp).align(Alignment.Center)
                     )
                 }
             } else {
-                Column(Modifier.verticalScroll(scrollState)) {
+                Column(Modifier) {
                     Column(
                         modifier
                             .padding(15.dp, 5.dp, 15.dp, 0.dp)
                             .clip(shape = MaterialTheme.shapes.large)
                             .background(MaterialTheme.colorScheme.primaryContainer)
                     ) {
-                        if (viewModel.temperatureValues.count() > 1) {
+                        if (state.temperatureValues.count() > 1) {
                             WeatherChart(
-                                title = "Температура 24 часа",
-                                temperatureValues = viewModel.temperatureValues,
-                                timeValues = viewModel.timeValues,
+                                title = "Температура на 24 часа",
+                                temperatureValues = state.temperatureValues,
+                                timeValues = state.timeValues,
                                 modifier = modifier.padding(24.dp)
                             )
                         }
                     }
 
-                    viewModel.forecast?.let {
-                        val list: MutableList<WeatherToday> = arrayListOf()
-                        for (day in viewModel.forecast!!.forecast.forecastday) {
-                            list.add(
-                                WeatherToday(
-                                    day.date,
-                                    day.day.maxtemp_c,
-                                    day.day.mintemp_c,
-                                    day.day.condition.text,
-                                    day.day.condition.icon,
-                                )
-                            )
-                        }
-
-                        WeatherTodayLazyRows(
+                    state.weather?.let {
+                        WeatherForDayLazyRows(
                             viewModel = viewModel,
-                            weathers = list
+                            weathers = it.daily.skipDays(1).toWeatherForDayList()
                         )
                     }
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .navigationBarsPadding()
+                    )
                 }
             }
         }

@@ -7,12 +7,10 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.Location
-import android.location.LocationListener
 import android.location.LocationManager
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -26,6 +24,7 @@ import androidx.core.content.ContextCompat
 import ru.pomidorka.weatherapp.ui.theme.WeatherAppTheme
 import java.time.DayOfWeek
 import java.time.Month
+import kotlin.math.round
 
 @Composable
 fun rememberCurrentLocation(): MutableState<Location?> {
@@ -96,15 +95,15 @@ fun requestSingleLocationUpdate(
     locationState: MutableState<Location?>
 ) {
     try {
-        locationManager.requestSingleUpdate(
-            LocationManager.GPS_PROVIDER,
-            object : LocationListener {
-                override fun onLocationChanged(loc: Location) {
-                    locationState.value = loc
-                }
-            },
-            null
-        )
+//        locationManager.requestSingleUpdate(
+//            LocationManager.GPS_PROVIDER,
+//            object : LocationListener {
+//                override fun onLocationChanged(loc: Location) {
+//                    locationState.value = loc
+//                }
+//            },
+//            null
+//        )
     } catch (e: SecurityException) {
         e.printStackTrace()
     }
@@ -128,28 +127,40 @@ fun checkGpsAndRequestLocation(
             .setNegativeButton("Отмена", null)
             .show()
     } else {
-        try {
-            locationManager.requestSingleUpdate(
-                LocationManager.GPS_PROVIDER,
-                object : LocationListener {
-                    override fun onLocationChanged(loc: Location) {
-                        locationState.value = loc
-                    }
-                },
-                null
-            )
-        } catch (e: SecurityException) {
-            e.printStackTrace()
-        }
+//        try {
+//            locationManager.requestSingleUpdate(
+//                LocationManager.GPS_PROVIDER,
+//                object : LocationListener {
+//                    override fun onLocationChanged(loc: Location) {
+//                        locationState.value = loc
+//                    }
+//                },
+//                null
+//            )
+//        } catch (e: SecurityException) {
+//            e.printStackTrace()
+//        }
     }
 }
 
-fun <T : Number> T.toFormatTemperature(): String {
-    return if (this.toDouble() > 0) {
-        "+%.1f".format(this).plus("°С").replace(',', '.')
-    } else {
-        "%.1f".format(this).plus("°С").replace(',', '.')
+fun <T : Number> T.toFormatTemperature1(unit: String = ""): String {
+    val value = this.toFloat()
+    val prefix = when {
+        value > 0 -> "+"
+        else -> ""
     }
+
+    return "$prefix%.1f°$unit".format(value).replace(',', '.')
+}
+
+fun <T : Number> T.toRoundedFormatTemperature(unit: String = ""): String {
+    val value = round(this.toFloat()).toInt()
+    val prefix = when {
+        value > 0 -> "+"
+        else -> ""
+    }
+
+    return "$prefix$value°$unit"
 }
 
 fun DayOfWeek.getDayOfWeekName(): String {
@@ -179,4 +190,8 @@ fun Month.getMonthName(): String {
         Month.NOVEMBER -> "Ноября"
         Month.DECEMBER -> "Декабря"
     }
+}
+
+fun getDeviceId(context: Context): String {
+    return Settings.System.getString(context.contentResolver, Settings.Secure.ANDROID_ID)
 }

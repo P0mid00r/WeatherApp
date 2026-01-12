@@ -2,17 +2,12 @@ package ru.pomidorka.weatherapp.ui.components
 
 import androidx.compose.animation.core.EaseInOutCubic
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.TextStyle
@@ -26,13 +21,13 @@ import ir.ehsannarmani.compose_charts.models.HorizontalIndicatorProperties
 import ir.ehsannarmani.compose_charts.models.LabelHelperProperties
 import ir.ehsannarmani.compose_charts.models.Line
 import ir.ehsannarmani.compose_charts.models.PopupProperties
-import ru.pomidorka.weatherapp.util.toFormatTemperature
+import ru.pomidorka.weatherapp.util.toRoundedFormatTemperature
 
 @Composable
 fun WeatherChart(
     title: String,
-    temperatureValues: List<Double> = listOf(28.0, 41.0, 5.0, 10.0, 35.0),
-    timeValues: List<String> = emptyList<String>(),
+    temperatureValues: List<Double>,
+    timeValues: List<String>,
     modifier: Modifier = Modifier
 ) {
     val popupProperties = PopupProperties(
@@ -45,7 +40,7 @@ fun WeatherChart(
         contentHorizontalPadding = 4.dp,
         contentVerticalPadding = 2.dp,
         contentBuilder = { _, valueIndex, value ->
-            value.toFormatTemperature().plus("\n${timeValues[valueIndex]}")
+            value.toRoundedFormatTemperature().plus("\n${timeValues[valueIndex]}")
         }
     )
 
@@ -86,7 +81,7 @@ fun WeatherChart(
             textStyle = TextStyle.Default.copy(color = MaterialTheme.colorScheme.onPrimaryContainer),
             padding = 16.dp,
             contentBuilder = { indicator ->
-                indicator.toFormatTemperature()
+                indicator.toRoundedFormatTemperature()
             },
         ),
     )

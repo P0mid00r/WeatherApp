@@ -8,15 +8,18 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -36,10 +39,12 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SearchBar
 import androidx.compose.material3.SearchBarDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -48,85 +53,113 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import androidx.navigation.compose.rememberNavController
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import ru.pomidorka.weatherapp.core.api.openmeteo.entity.search.City
 import ru.pomidorka.weatherapp.data.WeatherViewModel
-import ru.pomidorka.weatherapp.core.api.weatherapi.entity.current.SearchData
-import ru.pomidorka.weatherapp.ui.Routes
+import ru.pomidorka.weatherapp.ui.components.SimpleLoadingIndicator
+import ru.pomidorka.weatherapp.ui.components.WindowInsetsNotPadding
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SelectorCityScreen(
+    viewModel: WeatherViewModel,
+    navController: NavController,
     modifier: Modifier = Modifier,
-    viewModel: WeatherViewModel = viewModel(),
-    navController: NavController = rememberNavController(),
 ) {
     val scope = rememberCoroutineScope()
+    val mainScreenState by viewModel.mainScreenState.collectAsState()
     var isExpanded by remember { mutableStateOf(false) }
+    var isNavigating by remember { mutableStateOf(false) }
     val textFieldState = rememberTextFieldState()
-    var searchData: List<SearchData>? by remember { mutableStateOf(null) }
+    var isLoadingSearchedCites by remember { mutableStateOf(false) }
+    var lastQuery = ""
+    var searchedCityList: List<City>? by remember { mutableStateOf(null) }
 
     val animatedPadding by animateDpAsState(
         if (isExpanded) 0.dp else 25.dp,
         label = "padding"
     )
 
-    Column(modifier = modifier.background(MaterialTheme.colorScheme.background)) {
-        CenterAlignedTopAppBar(
-            title = { Text("Выбор города") },
-            navigationIcon = {
-                IconButton(
-                    onClick = {
-                        if (isExpanded) {
-                            isExpanded = false
-                            textFieldState.clearText()
-                        } else {
-                            navController.navigate(Routes.MainScreen.route)
-                        }
-                    }
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary
-                    )
+    fun searchClick() {
+        val query = textFieldState.text.toString()
+        if (!isLoadingSearchedCites && lastQuery != query) {
+            scope.launch(Dispatchers.IO) {
+                if (query.count() >= 3) {
+                    isLoadingSearchedCites = true
+                    lastQuery = query
+                    searchedCityList = viewModel.searchCities(query)
+                    isLoadingSearchedCites = false
+                } else {
+                    viewModel.showToast("Введите название от 3 символов")
                 }
             }
-        )
+        }
+    }
 
+    Scaffold(
+        topBar = {
+            CenterAlignedTopAppBar(
+                title = { Text("Выбор города") },
+                navigationIcon = {
+                    IconButton(
+                        onClick = {
+                            if (isExpanded) {
+                                isExpanded = false
+                                textFieldState.clearText()
+                            } else {
+                                if (!isNavigating) {
+                                    isNavigating = true
+                                    navController.popBackStack()
+                                }
+                            }
+                        }
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+            )
+        },
+        contentWindowInsets = WindowInsets.statusBars
+    ) { paddings ->
         Column(
             modifier = modifier
                 .fillMaxSize()
+                .padding(paddings)
                 .padding(animatedPadding, 0.dp)
         ) {
             SearchBar(
                 modifier = modifier.fillMaxWidth(),
+                shadowElevation = 4.dp,
+                windowInsets = WindowInsetsNotPadding(),
                 inputField = {
                     SearchBarDefaults.InputField(
                         state = textFieldState,
                         onSearch = {
-                            scope.launch {
-                                searchData = viewModel.searchCities(textFieldState.text.toString())
-                            }
+                            searchClick()
                         },
                         expanded = isExpanded,
-                        onExpandedChange = { isExpanded = it },
+                        onExpandedChange = {
+                            isExpanded = it
+                            searchedCityList = emptyList()
+                        },
                         enabled = true,
                         placeholder = { Text("Введите название города") },
                         leadingIcon = {
                             IconButton(
                                 enabled = isExpanded,
-                                onClick = {
-                                    scope.launch {
-                                        searchData = viewModel.searchCities(textFieldState.text.toString())
-                                    }
-                                }
+                                onClick = ::searchClick
                             ) {
                                 Icon(Icons.Default.Search, "")
                             }
@@ -138,51 +171,68 @@ fun SelectorCityScreen(
                                 }
                             }
                         },
-//                    trailingIcon = { Icon(Icons.Default.MoreVert, "") },
-//                    colors = colors.inputFieldColors,
-//                    interactionSource = interactionSource,
                     )
                 },
                 expanded = isExpanded,
                 onExpandedChange = { isExpanded = it }
             ) {
-                LazyColumn(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Top,
-                    modifier = Modifier.fillMaxSize(),
-                ) {
-                    searchData?.let {
-                        items(it) { item ->
-                            val cityName = item.name
-
-                            Row {
-                                ListItem(
-                                    headlineContent = { Text(cityName) },
-                                    supportingContent = { Text("${item.country}, ${item.region}") },
-                                    leadingContent = { Icon(Icons.Filled.LocationCity, contentDescription = null) },
-                                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                                    modifier = Modifier.clickable {
-                                        textFieldState.clearText()
-                                        viewModel.addCityToFavorites(item)
-                                        searchData = emptyList()
-                                        isExpanded = false
-                                    }
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 16.dp, vertical = 4.dp)
-                                )
+                if (isLoadingSearchedCites) {
+                    Box(modifier = modifier.fillMaxSize()) {
+                        SimpleLoadingIndicator(
+                            modifier = modifier.align(Alignment.Center),
+                            size = DpSize(120.dp, 120.dp),
+                        )
+                    }
+                } else {
+                    LazyColumn(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Top,
+                        modifier = Modifier.fillMaxSize(),
+                    ) {
+                        searchedCityList?.let { cityList ->
+                            items(cityList, key = { it.id }) { city ->
+                                Row {
+                                    ListItem(
+                                        headlineContent = { Text(city.name) },
+                                        supportingContent = { Text("${city.country}, ${city.admin1}") },
+                                        leadingContent = { Icon(Icons.Filled.LocationCity, contentDescription = null) },
+                                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                                        modifier = Modifier.clickable {
+                                            scope.launch {
+                                                textFieldState.clearText()
+                                                if (!viewModel.isFavoriteCityContains(city)) {
+                                                    viewModel.addCityToFavorites(city)
+                                                }
+                                                searchedCityList = emptyList()
+                                                isExpanded = false
+                                            }
+                                        }
+                                            .fillMaxWidth()
+                                            .padding(
+                                                horizontal = 16.dp,
+                                                vertical = 4.dp
+                                            )
+                                    )
+                                }
                             }
                         }
                     }
                 }
             }
-            Spacer(Modifier.padding(0.dp, 5.dp))
+            Spacer(Modifier.padding(vertical = 5.dp))
 
             LazyColumn {
                 items(viewModel.favoritesCity, key = { it.id }) {
-                    RowFavoriteCityName(
-                        modifier = Modifier.padding(0.dp, 5.dp),
-                        searchData = it,
-                        viewModel = viewModel
+                    RowFavoriteCity(
+                        modifier = Modifier.padding(vertical = 5.dp),
+                        isSelected = mainScreenState.selectedCity == it,
+                        city = it,
+                        onSelectClick = {
+                            viewModel.setFavoriteCity(it)
+                        },
+                        onRemoveClick = {
+                            viewModel.removeFavoriteCity(it)
+                        }
                     )
                 }
             }
@@ -191,13 +241,14 @@ fun SelectorCityScreen(
 }
 
 @Composable
-private fun RowFavoriteCityName(
+private fun RowFavoriteCity(
     modifier: Modifier = Modifier,
-    searchData: SearchData,
-    viewModel: WeatherViewModel = viewModel()
+    city: City,
+    isSelected: Boolean,
+    onSelectClick: (City) -> Unit,
+    onRemoveClick: (City) -> Unit,
 ) {
     val scope = rememberCoroutineScope()
-
     var isRemove by remember { mutableStateOf(false) }
 
     val animatedRemove by animateDpAsState(
@@ -206,7 +257,7 @@ private fun RowFavoriteCityName(
     )
 
     val backgroundColor by animateColorAsState(
-        targetValue = if (viewModel.selectedCity == searchData) {
+        targetValue = if (isSelected) {
             MaterialTheme.colorScheme.primary
         } else {
             MaterialTheme.colorScheme.surfaceVariant
@@ -216,7 +267,7 @@ private fun RowFavoriteCityName(
     )
 
     val foregroundColor by animateColorAsState(
-        targetValue = if (viewModel.selectedCity == searchData) {
+        targetValue = if (isSelected) {
             MaterialTheme.colorScheme.onPrimary
         } else {
             MaterialTheme.colorScheme.onSurface
@@ -230,9 +281,13 @@ private fun RowFavoriteCityName(
     ) {
         Row(
             modifier = modifier
+                .shadow(
+                    elevation = 4.dp,
+                    shape = RoundedCornerShape(25.dp)
+                )
                 .height(animatedRemove)
                 .clip(RoundedCornerShape(25.dp))
-                .clickable { viewModel.setCity(searchData) }
+                .clickable { onSelectClick(city) }
                 .background(backgroundColor)
                 .padding(25.dp)
                 .fillMaxWidth(),
@@ -245,12 +300,12 @@ private fun RowFavoriteCityName(
                     .height(IntrinsicSize.Max)
             ) {
                 Text(
-                    text = searchData.name,
+                    text = city.name,
                     overflow = TextOverflow.Ellipsis,
                     color = foregroundColor,
                 )
                 Text(
-                    text = "${searchData.country}, ${searchData.region}",
+                    text = "${city.country}${if (city.admin1 == null) "" else ", ${city.admin1}"}",
                     overflow = TextOverflow.Ellipsis,
                     maxLines = 1,
                     color = foregroundColor,
@@ -264,7 +319,7 @@ private fun RowFavoriteCityName(
                         scope.launch {
                             isRemove = true
                             delay(500)
-                            viewModel.removeFavoritesCity(searchData)
+                            onRemoveClick(city)
                         }
                     }
                 ) {

@@ -1,7 +1,12 @@
 package ru.pomidorka.weatherapp.ui
 
-sealed class Routes(val route: String) {
-    data object MainScreen : Routes("MainScreen")
-    data object SelectorCityScreen : Routes("SelectorCityScreen")
-    data object InfoScreen : Routes("InfoScreen")
+import kotlinx.serialization.Serializable
+
+sealed class Routes() {
+    @Serializable
+    data object MainScreen : Routes()
+    @Serializable
+    data object SelectorCityScreen : Routes()
+    @Serializable
+    data object InfoScreen : Routes()
 }
