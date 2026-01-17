@@ -99,6 +99,8 @@ android {
 }
 
 dependencies {
+    implementation(libs.mobileads)
+
     implementation(libs.kotlinx.serialization.json)
 
     implementation(platform(libs.tracer.platform))
