@@ -107,7 +107,7 @@ dependencies {
     implementation(libs.tracer.crash.report)
 
     implementation(libs.lifecycle.viewmodel.compose)
-    implementation("androidx.compose.material3:material3:1.5.0-alpha09")
+    implementation(libs.material3)
     implementation(libs.androidx.material.icons.extended)
 
     // Графики
