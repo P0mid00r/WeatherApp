@@ -12,7 +12,7 @@ import com.yandex.mobile.ads.common.ImpressionData
 
 object OpenAppAd {
     private var isShowed = false
-    private const val ID = AdId.DEMO_AD
+    private const val ID = AdId.OPEN_AD_ID
     private var mAppOpenAd: AppOpenAd? = null
 
     fun load(activity: Activity) {
