@@ -1,3 +1,4 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import java.util.Properties
 
 fun loadProperties(): Properties {
@@ -74,12 +75,16 @@ android {
             )
         }
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8
         targetCompatibility = JavaVersion.VERSION_1_8
     }
-    kotlinOptions {
-        jvmTarget = "1.8"
+
+    kotlin {
+        compilerOptions {
+            jvmTarget = JvmTarget.fromTarget("1.8")
+        }
     }
     ksp {
 
@@ -115,7 +120,7 @@ dependencies {
 
     // Работа с сетью
     implementation(libs.retrofit)
-    implementation(libs.converter.gson)
+    implementation(libs.converter.kotlinx.serialization)
 
     // Навигация
     implementation(libs.androidx.navigation.compose)

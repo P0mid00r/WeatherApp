@@ -1,24 +1,31 @@
 package ru.pomidorka.weatherapp.core.api.openmeteo
 
 import androidx.annotation.IntRange
-import okio.IOException
+import kotlinx.serialization.json.Json
+import okhttp3.MediaType.Companion.toMediaType
 import retrofit2.Retrofit
-import retrofit2.converter.gson.GsonConverterFactory
+import retrofit2.converter.kotlinx.serialization.asConverterFactory
 import ru.pomidorka.weatherapp.core.Result
 import ru.pomidorka.weatherapp.core.api.openmeteo.entity.CurrentWeather
 import ru.pomidorka.weatherapp.core.api.openmeteo.entity.minutely.Minutely15
 import ru.pomidorka.weatherapp.core.api.openmeteo.entity.minutely.OpenMeteoData
 import ru.pomidorka.weatherapp.core.api.openmeteo.entity.search.City
-import ru.pomidorka.weatherapp.core.api.openmeteo.entity.search.SearchCityData
 import ru.pomidorka.weatherapp.core.api.openmeteo.entity.toCurrentWeather
 
 object OpenMeteo {
+    private val json = Json {
+        ignoreUnknownKeys = true
+        explicitNulls = false
+    }
+
     private const val BASE_URL = "https://api.open-meteo.com/v1/"
 
-    val openMeteoApi: OpenMeteoApi by lazy {
+    private val openMeteoApi: OpenMeteoApi by lazy {
         val retrofit: Retrofit = Retrofit.Builder()
             .baseUrl(BASE_URL)
-            .addConverterFactory(GsonConverterFactory.create())
+            .addConverterFactory(
+                json.asConverterFactory("application/json; charset=utf-8".toMediaType())
+            )
             .build()
 
         retrofit.create(OpenMeteoApi::class.java)
@@ -62,7 +69,7 @@ object OpenMeteo {
             } else {
                 Result.Failure(Throwable(response.errorBody()?.string()))
             }
-        } catch (ex: IOException) {
+        } catch (ex: Exception) {
             Result.Failure(ex)
         }
     }
@@ -86,19 +93,19 @@ object OpenMeteo {
             } else {
                 Result.Failure(Throwable(response.errorBody()?.string()))
             }
-        } catch (ex: IOException) {
+        } catch (ex: Exception) {
             Result.Failure(ex)
         }
     }
 
-    suspend fun search(query: String): Result<SearchCityData> {
+    suspend fun search(query: String): Result<List<City>> {
         return try {
             val response = openMeteoApi.search(
                 query = query,
             )
 
             if (response.isSuccessful) {
-                Result.Success(response.body()!!)
+                Result.Success(response.body()?.cities ?: emptyList())
             } else {
                 Result.Failure(Throwable(response.errorBody()?.string()))
             }

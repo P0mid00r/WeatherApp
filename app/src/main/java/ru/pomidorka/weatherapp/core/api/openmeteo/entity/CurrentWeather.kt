@@ -1,7 +1,8 @@
 package ru.pomidorka.weatherapp.core.api.openmeteo.entity
 
 import androidx.annotation.IntRange
-import com.google.gson.annotations.SerializedName
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 import ru.pomidorka.weatherapp.core.api.openmeteo.entity.minutely.OpenMeteoData
 
 data class CurrentWeather(
@@ -14,7 +15,7 @@ data class CurrentWeather(
 
 fun OpenMeteoData.toCurrentWeather(): CurrentWeather {
     return CurrentWeather(
-        condition = current.weatherCode.codeToConditionName(),
+        condition = current!!.weatherCode.codeToConditionName(),
         temperature = current.temperature,
         apparentTemperature = current.apparentTemperature,
         temperatureMax = daily.maxTemps.first(),
@@ -32,22 +33,25 @@ fun CurrentWeatherData.toCurrentWeather(): CurrentWeather {
     )
 }
 
+@Serializable
 data class CurrentWeatherData(
-    @SerializedName("current") val current: CurrentData,
-    @SerializedName("daily") val daily: DailyData
+    @SerialName("current") val current: CurrentData,
+    @SerialName("daily") val daily: DailyData
 )
 
+@Serializable
 data class CurrentData(
-    @SerializedName("weather_code") val weatherCode: Int,
-    @SerializedName("temperature_2m") val temperature: Float,
-    @SerializedName("apparent_temperature") val apparentTemperature: Float
+    @SerialName("weather_code") val weatherCode: Int,
+    @SerialName("temperature_2m") val temperature: Float,
+    @SerialName("apparent_temperature") val apparentTemperature: Float
 )
 
+@Serializable
 data class DailyData(
-    @SerializedName("time") val time: List<String>,
-    @SerializedName("weather_code") val weatherCode: List<Int>,
-    @SerializedName("temperature_2m_max") val maxTemps: List<Float>,
-    @SerializedName("temperature_2m_min") val minTemps: List<Float>
+    @SerialName("time") val time: List<String>,
+    @SerialName("weather_code") val weatherCode: List<Int>,
+    @SerialName("temperature_2m_max") val maxTemps: List<Float>,
+    @SerialName("temperature_2m_min") val minTemps: List<Float>
 )
 
 fun DailyData.skipDays(

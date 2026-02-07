@@ -2,14 +2,16 @@ package ru.pomidorka.weatherapp.core.api.openmeteo.entity.minutely
 
 import androidx.annotation.IntRange
 import androidx.compose.runtime.Stable
-import com.google.gson.annotations.SerializedName
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 
 @Stable
+@Serializable
 data class Minutely15(
-    @SerializedName("apparent_temperature") val apparentTemperature: List<Double>,
-    @SerializedName("temperature_2m") val temperature2m: List<Double>,
-    @SerializedName("time") val time: List<String>,
-    @SerializedName("is_day") val isDay: List<Int>,
+    @SerialName("apparent_temperature") val apparentTemperature: List<Double>,
+    @SerialName("temperature_2m") val temperature2m: List<Double>,
+    @SerialName("time") val time: List<String>,
+    @SerialName("is_day") val isDay: List<Int>,
 )
 
 fun Minutely15.skipDays(

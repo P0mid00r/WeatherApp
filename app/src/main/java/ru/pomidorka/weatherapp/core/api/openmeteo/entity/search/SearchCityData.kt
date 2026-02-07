@@ -1,10 +1,12 @@
 package ru.pomidorka.weatherapp.core.api.openmeteo.entity.search
 
 import androidx.compose.runtime.Stable
-import com.google.gson.annotations.SerializedName
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerialName
 
 @Stable
+@Serializable
 data class SearchCityData(
-    @SerializedName("generationtime_ms") val generationTimeMs: Double,
-    @SerializedName("results") val cities: List<City>?
+    @SerialName("generationtime_ms") val generationTimeMs: Double,
+    @SerialName("results") val cities: List<City>?
 )

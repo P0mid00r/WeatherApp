@@ -12,13 +12,12 @@ lifecycleRuntimeKtx = "2.10.0"
 activityCompose = "1.12.2"
 composeBom = "2025.12.01"
 ksp = "2.3.0"
-converterGson = "2.9.0"
 lifecycleViewmodelCompose = "2.10.0"
 material3 = "1.5.0-alpha12"
 materialIcons = "1.7.8"
 mobileads = "7.18.1"
 navigationCompose = "2.9.6"
-retrofit = "2.9.0"
+retrofit = "3.0.0"
 tracer = "1.1.7"
 
 [libraries]
@@ -42,7 +41,7 @@ androidx-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-man
 androidx-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
 androidx-material3 = { group = "androidx.compose.material3", name = "material3" }
 
-converter-gson = { module = "com.squareup.retrofit2:converter-gson", version.ref = "converterGson" }
+converter-kotlinx-serialization = { module = "com.squareup.retrofit2:converter-kotlinx-serialization", version.ref = "retrofit" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerializationJson" }
 lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycleViewmodelCompose" }
 material3 = { module = "androidx.compose.material3:material3", version.ref = "material3" }
