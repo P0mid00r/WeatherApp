@@ -1,15 +1,11 @@
 package ru.pomidorka.weatherapp.data
 
 import android.content.Context
-import android.location.Location
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import android.widget.Toast
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
@@ -25,6 +21,7 @@ import ru.pomidorka.weatherapp.core.Result
 import ru.pomidorka.weatherapp.core.api.openmeteo.OpenMeteo
 import ru.pomidorka.weatherapp.core.api.openmeteo.entity.minutely.Minutely15
 import ru.pomidorka.weatherapp.core.api.openmeteo.entity.search.City
+import ru.pomidorka.weatherapp.data.repository.AppRepository
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
@@ -33,8 +30,6 @@ class WeatherViewModel(private val applicationContext: Context) : ViewModel() {
 
     private var _mainScreenState = MutableStateFlow(MainScreenState())
     val mainScreenState = _mainScreenState.asStateFlow()
-
-    var location by mutableStateOf<Location?>(null)
 
     var favoritesCity = mutableStateListOf<City>()
         private set
@@ -48,34 +43,12 @@ class WeatherViewModel(private val applicationContext: Context) : ViewModel() {
     }
 
     private fun loadSettings() {
-        repository.apply {
-            favoritesCity.addAll(appData.favoritesCity)
-            _mainScreenState.update {
-                MainScreenState(
-                    selectedCity = appData.selectedCity,
-                )
-            }
-
-            if (mainScreenState.value.selectedCity == null && appData.favoritesCity.isEmpty()) {
-                val city = City(
-                    id = 524901,
-                    latitude = 55.75222f,
-                    longitude = 37.61556f,
-                    timezone = "Europe/Moscow",
-                    name = "Москва",
-                    country = "Россия",
-                    admin1 = "Москва"
-                )
-                favoritesCity.add(city)
-                _mainScreenState.update {
-                    it.copy(selectedCity = favoritesCity[0])
-                }
-                appData = appData.copy(
-                    selectedCity = city,
-                    favoritesCity = favoritesCity
-                )
-                repository.save()
-            }
+        val appSettings = repository.appSettingsState.value
+        favoritesCity.addAll(appSettings.favoritesCity)
+        _mainScreenState.update {
+            MainScreenState(
+                selectedCity = appSettings.selectedCity,
+            )
         }
     }
 
@@ -99,7 +72,9 @@ class WeatherViewModel(private val applicationContext: Context) : ViewModel() {
                     }
                 }
                 is Result.Failure -> {
-                    showToast(currentWeather.throwable.toString())
+                    currentWeather.throwable.localizedMessage?.let {
+                        showToast(it)
+                    }
                 }
             }
 
@@ -135,7 +110,9 @@ class WeatherViewModel(private val applicationContext: Context) : ViewModel() {
                     }
                 }
                 is Result.Failure -> {
-                    showToast(forecastOfDays.throwable.message.toString())
+                    forecastOfDays.throwable.localizedMessage?.let {
+                        showToast(it)
+                    }
                 }
             }
 
@@ -148,7 +125,9 @@ class WeatherViewModel(private val applicationContext: Context) : ViewModel() {
                     }
                 }
                 is Result.Failure -> {
-                    showToast(response.throwable.message.toString())
+                    response.throwable.localizedMessage?.let {
+                        showToast(it)
+                    }
                 }
             }
 
@@ -159,22 +138,20 @@ class WeatherViewModel(private val applicationContext: Context) : ViewModel() {
     }
 
     fun showToast(message: String) {
-        Log.d("TEST", message)
         Handler(Looper.getMainLooper()).post {
             Toast.makeText(applicationContext, message, Toast.LENGTH_SHORT).show()
         }
+        Log.d("WeatherViewModel", message)
     }
 
     fun addCityToFavorites(city: City) {
         viewModelScope.launch(Dispatchers.IO) {
-            city.let {
-                favoritesCity.add(it)
+            favoritesCity.add(city)
 
-                repository.apply {
-                    appData = appData.copy(
-                        favoritesCity = favoritesCity
-                    )
-                }.save()
+            repository.update {
+                it.copy(
+                    favoritesCity = favoritesCity
+                )
             }
         }
     }
@@ -182,25 +159,19 @@ class WeatherViewModel(private val applicationContext: Context) : ViewModel() {
     // TODO при удалении выделенный город остается
     fun removeFavoriteCity(city: City) {
         viewModelScope.launch(Dispatchers.IO) {
-            city.let {
-                favoritesCity.remove(it)
+            favoritesCity.remove(city)
 
-                repository.apply {
-                    appData = appData.copy(
-                        favoritesCity = favoritesCity
-                    )
-                }.save()
+            repository.update {
+                it.copy(favoritesCity = favoritesCity)
             }
         }
     }
 
     fun setFavoriteCity(city: City) {
         _mainScreenState.update { it.copy(selectedCity = city) }
-        repository.apply {
-            appData = appData.copy(
-                selectedCity = city
-            )
-        }.save()
+        repository.update {
+            it.copy(selectedCity = city)
+        }
         loadWeatherInfo()
     }
 
@@ -218,15 +189,17 @@ class WeatherViewModel(private val applicationContext: Context) : ViewModel() {
         }
     }
 
-    suspend fun isFavoriteCityContains(city: City): Boolean {
-        return repository.appData.favoritesCity.contains(city)
+    fun isFavoriteCityContains(city: City): Boolean {
+        return repository.appSettingsState.value.favoritesCity.contains(city)
     }
 
     suspend fun searchCities(query: String): List<City> {
         return when (val response = OpenMeteo.search(query)) {
-            is Result.Success -> response.data.cities ?: emptyList()
+            is Result.Success -> response.data
             is Result.Failure -> {
-                showToast(response.throwable.message ?: "")
+                response.throwable.localizedMessage?.let {
+                    showToast(it)
+                }
 
                 emptyList()
             }
@@ -248,7 +221,9 @@ class WeatherViewModel(private val applicationContext: Context) : ViewModel() {
         return when(response) {
             is Result.Success -> response.data
             is Result.Failure -> {
-                showToast(response.throwable.message ?: "")
+                response.throwable.localizedMessage?.let {
+                    showToast(it)
+                }
 
                 null
             }
