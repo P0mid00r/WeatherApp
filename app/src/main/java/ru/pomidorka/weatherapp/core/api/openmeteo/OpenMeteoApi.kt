@@ -12,6 +12,7 @@ interface OpenMeteoApi {
      * url example: https://api.open-meteo.com/v1/forecast?latitude=53.3606&longitude=83.7636&daily=temperature_2m_max,temperature_2m_min,weather_code&timezone=auto&forecast_days=3&minutely_15=temperature_2m,apparent_temperature
      */
     @GET("forecast")
+    @Cached(hours = 1)
     suspend fun getForecastOfDays(
         @Query("latitude") latitude: String,
         @Query("longitude") longitude: String,
@@ -22,6 +23,7 @@ interface OpenMeteoApi {
     ): Response<OpenMeteoData>
 
     @GET("forecast")
+    @Cached(hours = 6)
     suspend fun getForecastOfDates(
         @Query("latitude") latitude: String,
         @Query("longitude") longitude: String,
@@ -36,6 +38,7 @@ interface OpenMeteoApi {
      * url example: https://api.open-meteo.com/v1/forecast?latitude=53.3606&longitude=83.7636&daily=temperature_2m_max,temperature_2m_min&current=temperature_2m,apparent_temperature,weather_code&timezone=auto&forecast_days=1
      */
     @GET("forecast")
+    @Cached(minutes = 5)
     suspend fun getCurrentWeather(
         @Query("latitude") latitude: String,
         @Query("longitude") longitude: String,
@@ -46,6 +49,7 @@ interface OpenMeteoApi {
     ): Response<CurrentWeatherData>
 
     @GET("https://geocoding-api.open-meteo.com/v1/search")
+    @Cached(days = 1)
     suspend fun search(
         @Query("name") query: String,
         @Query("language") language: String = "ru",
