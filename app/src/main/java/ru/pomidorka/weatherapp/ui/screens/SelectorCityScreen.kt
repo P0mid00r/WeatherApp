@@ -47,8 +47,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -63,6 +63,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import ru.pomidorka.weatherapp.core.api.openmeteo.entity.search.City
+import ru.pomidorka.weatherapp.core.api.openmeteo.entity.search.aboutCity
 import ru.pomidorka.weatherapp.data.WeatherViewModel
 import ru.pomidorka.weatherapp.ui.components.SimpleLoadingIndicator
 import ru.pomidorka.weatherapp.ui.components.WindowInsetsNotPadding
@@ -76,12 +77,12 @@ fun SelectorCityScreen(
 ) {
     val scope = rememberCoroutineScope()
     val mainScreenState by viewModel.mainScreenState.collectAsState()
-    var isExpanded by remember { mutableStateOf(false) }
-    var isNavigating by remember { mutableStateOf(false) }
+    var isExpanded by rememberSaveable { mutableStateOf(false) }
+    var isNavigating by rememberSaveable { mutableStateOf(false) }
     val textFieldState = rememberTextFieldState()
-    var isLoadingSearchedCites by remember { mutableStateOf(false) }
-    var lastQuery = ""
-    var searchedCityList: List<City>? by remember { mutableStateOf(null) }
+    var isLoadingSearchedCites by rememberSaveable { mutableStateOf(false) }
+    var lastQuery by rememberSaveable { mutableStateOf("") }
+    var searchedCityList: List<City> by rememberSaveable { mutableStateOf(emptyList()) }
 
     val animatedPadding by animateDpAsState(
         if (isExpanded) 0.dp else 25.dp,
@@ -152,6 +153,7 @@ fun SelectorCityScreen(
                         expanded = isExpanded,
                         onExpandedChange = {
                             isExpanded = it
+                            lastQuery = ""
                             searchedCityList = emptyList()
                         },
                         enabled = true,
@@ -189,12 +191,12 @@ fun SelectorCityScreen(
                         verticalArrangement = Arrangement.Top,
                         modifier = Modifier.fillMaxSize(),
                     ) {
-                        searchedCityList?.let { cityList ->
-                            items(cityList, key = { it.id }) { city ->
+                        if (searchedCityList.isNotEmpty()) {
+                            items(searchedCityList, key = { it.id }) { city ->
                                 Row {
                                     ListItem(
                                         headlineContent = { Text(city.name) },
-                                        supportingContent = { Text("${city.country}, ${city.admin1}") },
+                                        supportingContent = { Text(city.aboutCity) },
                                         leadingContent = { Icon(Icons.Filled.LocationCity, contentDescription = null) },
                                         colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                                         modifier = Modifier.clickable {
@@ -249,7 +251,7 @@ private fun RowFavoriteCity(
     onRemoveClick: (City) -> Unit,
 ) {
     val scope = rememberCoroutineScope()
-    var isRemove by remember { mutableStateOf(false) }
+    var isRemove by rememberSaveable { mutableStateOf(false) }
 
     val animatedRemove by animateDpAsState(
         if (isRemove) { 0.dp } else { 105.dp },
@@ -287,7 +289,9 @@ private fun RowFavoriteCity(
                 )
                 .height(animatedRemove)
                 .clip(RoundedCornerShape(25.dp))
-                .clickable { onSelectClick(city) }
+                .clickable(enabled = !isSelected) {
+                    onSelectClick(city)
+                }
                 .background(backgroundColor)
                 .padding(25.dp)
                 .fillMaxWidth(),
@@ -305,7 +309,7 @@ private fun RowFavoriteCity(
                     color = foregroundColor,
                 )
                 Text(
-                    text = "${city.country}${if (city.admin1 == null) "" else ", ${city.admin1}"}",
+                    text = city.aboutCity,
                     overflow = TextOverflow.Ellipsis,
                     maxLines = 1,
                     color = foregroundColor,
@@ -315,6 +319,7 @@ private fun RowFavoriteCity(
             Row(horizontalArrangement = Arrangement.End) {
                 IconButton(
                     modifier = modifier.width(50.dp),
+                    enabled = !isSelected,
                     onClick = {
                         scope.launch {
                             isRemove = true
@@ -325,7 +330,7 @@ private fun RowFavoriteCity(
                 ) {
                     Icon(
                         imageVector = Icons.Filled.Delete,
-                        contentDescription = "",
+                        contentDescription = null,
                         modifier = Modifier.size(35.dp),
                         tint = foregroundColor
                     )

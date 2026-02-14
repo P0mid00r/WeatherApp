@@ -10,8 +10,13 @@ data class City(
     @SerialName("id") val id: Int,
     @SerialName("latitude") val latitude: Float,
     @SerialName("longitude") val longitude: Float,
-    @SerialName("timezone") val timezone: String,
+    @SerialName("timezone") val timezone: String?,
     @SerialName("name") val name: String,
-    @SerialName("country") val country: String,
+    @SerialName("country") val country: String?,
     @SerialName("admin1") val admin1: String?,
 )
+
+val City.aboutCity: String
+    get() = listOf(country, admin1)
+        .filter { it != null }
+        .joinToString()
