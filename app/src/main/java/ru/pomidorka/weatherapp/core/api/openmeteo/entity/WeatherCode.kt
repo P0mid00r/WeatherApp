@@ -1,5 +1,10 @@
 package ru.pomidorka.weatherapp.core.api.openmeteo.entity
 
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.res.painterResource
+import ru.pomidorka.weatherapp.R
+
 fun Int.codeToConditionName() = conditionRuMap[this] ?: throw IllegalArgumentException()
 
 enum class TimeOfDay(val value: String) {
@@ -24,12 +29,80 @@ enum class TimeOfDay(val value: String) {
 }
 
 fun Int.codeToUrlIcon(timeOfDay: TimeOfDay): String {
-    val iconId = weatherCodeToIconMap[this] ?: 113
+    val iconId = weatherCodeToIconCodeMap[this] ?: 113
     val timeOfDayName = timeOfDay.value
     return "https://cdn.weatherapi.com/weather/64x64/$timeOfDayName/$iconId.png"
 }
 
-private val weatherCodeToIconMap = mapOf<Int, Int>(
+@Composable
+fun Int.codeToIcon(timeOfDay: TimeOfDay): Painter {
+    val iconId = when(timeOfDay) {
+        TimeOfDay.Day -> weatherCodeToDayIconDrawableId[this]
+        TimeOfDay.Night -> weatherCodeToNightIconDrawableId[this]
+    }
+
+    return painterResource(iconId ?: throw IllegalArgumentException())
+}
+
+private val weatherCodeToDayIconDrawableId = mapOf<Int, Int>(
+    0 to R.drawable.weather_icon_day_113,
+    1 to R.drawable.weather_icon_day_116,
+    2 to R.drawable.weather_icon_day_116,
+    3 to R.drawable.weather_icon_day_122,
+    45 to R.drawable.weather_icon_day_248,
+    48 to R.drawable.weather_icon_day_260,
+    51 to R.drawable.weather_icon_day_263,
+    53 to R.drawable.weather_icon_day_266,
+    55 to R.drawable.weather_icon_day_266,
+    61 to R.drawable.weather_icon_day_296,
+    63 to R.drawable.weather_icon_day_302,
+    65 to R.drawable.weather_icon_day_308,
+    66 to R.drawable.weather_icon_day_311,
+    67 to R.drawable.weather_icon_day_314,
+    71 to R.drawable.weather_icon_day_326,
+    73 to R.drawable.weather_icon_day_332,
+    75 to R.drawable.weather_icon_day_338,
+    77 to R.drawable.weather_icon_day_350,
+    80 to R.drawable.weather_icon_day_353,
+    81 to R.drawable.weather_icon_day_356,
+    82 to R.drawable.weather_icon_day_359,
+    85 to R.drawable.weather_icon_day_368,
+    86 to R.drawable.weather_icon_day_371,
+    95 to R.drawable.weather_icon_day_200,
+    96 to R.drawable.weather_icon_day_386,
+    99 to R.drawable.weather_icon_day_389,
+)
+
+private val weatherCodeToNightIconDrawableId = mapOf<Int, Int>(
+    0 to R.drawable.weather_icon_night_113,
+    1 to R.drawable.weather_icon_night_116,
+    2 to R.drawable.weather_icon_night_116,
+    3 to R.drawable.weather_icon_night_122,
+    45 to R.drawable.weather_icon_night_248,
+    48 to R.drawable.weather_icon_night_260,
+    51 to R.drawable.weather_icon_night_263,
+    53 to R.drawable.weather_icon_night_266,
+    55 to R.drawable.weather_icon_night_266,
+    61 to R.drawable.weather_icon_night_296,
+    63 to R.drawable.weather_icon_night_302,
+    65 to R.drawable.weather_icon_night_308,
+    66 to R.drawable.weather_icon_night_311,
+    67 to R.drawable.weather_icon_night_314,
+    71 to R.drawable.weather_icon_night_326,
+    73 to R.drawable.weather_icon_night_332,
+    75 to R.drawable.weather_icon_night_338,
+    77 to R.drawable.weather_icon_night_350,
+    80 to R.drawable.weather_icon_night_353,
+    81 to R.drawable.weather_icon_night_356,
+    82 to R.drawable.weather_icon_night_359,
+    85 to R.drawable.weather_icon_night_368,
+    86 to R.drawable.weather_icon_night_371,
+    95 to R.drawable.weather_icon_night_200,
+    96 to R.drawable.weather_icon_night_386,
+    99 to R.drawable.weather_icon_night_389,
+)
+
+private val weatherCodeToIconCodeMap = mapOf<Int, Int>(
     // Clear sky
     0 to 113,  // 1000: Sunny/Clear
 
