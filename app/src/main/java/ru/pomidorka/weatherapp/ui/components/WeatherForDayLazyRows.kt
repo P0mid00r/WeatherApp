@@ -2,6 +2,7 @@ package ru.pomidorka.weatherapp.ui.components
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -33,10 +34,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import coil3.compose.AsyncImage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import ru.pomidorka.weatherapp.core.api.openmeteo.entity.TimeOfDay
 import ru.pomidorka.weatherapp.core.api.openmeteo.entity.WeatherForDay
+import ru.pomidorka.weatherapp.core.api.openmeteo.entity.codeToIcon
 import ru.pomidorka.weatherapp.core.api.openmeteo.entity.minutely.Minutely15
 import ru.pomidorka.weatherapp.data.WeatherViewModel
 import ru.pomidorka.weatherapp.util.getDayOfWeekName
@@ -112,14 +114,13 @@ private fun WeatherForDayRow(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            if (!weatherForDay.icon.isBlank()) {
-                AsyncImage(
-                    modifier = modifier.size(56.dp),
-                    model = weatherForDay.icon,
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop
-                )
-            }
+            Image(
+                modifier = modifier.size(56.dp),
+                painter = weatherForDay.weatherCode.codeToIcon(TimeOfDay.Day),
+                contentDescription = null,
+                contentScale = ContentScale.Crop
+            )
+
             Column(modifier = modifier.weight(1f)) {
                 val currentDate = LocalDate.now()
                 val date = LocalDate.parse(weatherForDay.date)

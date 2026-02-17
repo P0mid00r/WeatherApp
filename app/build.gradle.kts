@@ -1,12 +1,9 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import java.util.Properties
 
-fun loadProperties(): Properties {
+fun loadProperties() = Properties().apply {
     val localPropertiesFile = project.rootProject.file("local.properties")
-    val properties = Properties()
-    properties.load(localPropertiesFile.inputStream())
-
-    return properties
+    load(localPropertiesFile.inputStream())
 }
 
 val localProperties = loadProperties()
@@ -16,7 +13,7 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.compose.compiler)
     alias(libs.plugins.ksp)
-    id("ru.ok.tracer").version("1.1.7")
+    id("ru.ok.tracer") version "1.1.7"
     id("org.jetbrains.kotlin.plugin.serialization") version "2.2.21"
 }
 
@@ -124,10 +121,6 @@ dependencies {
 
     // Навигация
     implementation(libs.androidx.navigation.compose)
-
-    // Загрузка картинок
-    implementation(libs.coil.compose)
-    implementation(libs.coil.network.okhttp)
 
     // Интерфейс
     implementation(libs.androidx.core.ktx)

@@ -5,5 +5,5 @@ data class WeatherForDay(
     val temperatureMax: Float,
     val temperatureMin: Float,
     val condition: String,
-    val icon: String,
+    val weatherCode: Int,
 )

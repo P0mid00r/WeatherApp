@@ -75,7 +75,7 @@ fun DailyData.toWeatherForDayList() = mutableListOf<WeatherForDay>().apply {
             temperatureMax = data.maxTemps[i],
             temperatureMin = data.minTemps[i],
             condition = data.weatherCode[i].codeToConditionName(),
-            icon = data.weatherCode[i].codeToUrlIcon(TimeOfDay.Day)
+            weatherCode = data.weatherCode[i]
         ))
     }
 }
