@@ -11,6 +11,7 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -22,11 +23,15 @@ import ru.pomidorka.weatherapp.core.api.openmeteo.OpenMeteo
 import ru.pomidorka.weatherapp.core.api.openmeteo.entity.minutely.Minutely15
 import ru.pomidorka.weatherapp.core.api.openmeteo.entity.search.City
 import ru.pomidorka.weatherapp.data.repository.AppRepository
+import ru.pomidorka.weatherapp.util.NetworkChecker
+import ru.pomidorka.weatherapp.util.NetworkState
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
 class WeatherViewModel(private val applicationContext: Context) : ViewModel() {
     private val repository = AppRepository(applicationContext)
+    private val openMeteo = OpenMeteo(applicationContext)
+    val networkChecker = NetworkChecker(applicationContext)
 
     private var _mainScreenState = MutableStateFlow(MainScreenState())
     val mainScreenState = _mainScreenState.asStateFlow()
@@ -37,9 +42,16 @@ class WeatherViewModel(private val applicationContext: Context) : ViewModel() {
     private var jobUpdaterWeatherInfo: Job? = null
 
     init {
+        networkChecker.register()
         loadSettings()
         loadWeatherInfo()
         setEnabledUpdaterWeatherInfo(false)
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+
+        networkChecker.unregister()
     }
 
     private fun loadSettings() {
@@ -53,86 +65,95 @@ class WeatherViewModel(private val applicationContext: Context) : ViewModel() {
     }
 
     fun loadWeatherInfo() {
-        _mainScreenState.update {
-            MainScreenState(
-                selectedCity = it.selectedCity
-            )
-        }
-        viewModelScope.launch(Dispatchers.IO) {
-            val selectedCity = _mainScreenState.value.selectedCity!!
-
-            val currentWeatherResponse = async { OpenMeteo.getCurrentWeather(selectedCity.latitude, selectedCity.longitude) }
-            val forecastOfDaysResponse = async { OpenMeteo.getForecastOfDays(selectedCity.latitude, selectedCity.longitude) }
-            val forecastFor7DaysResponse = async { OpenMeteo.getForecastOfDays(selectedCity.latitude, selectedCity.longitude, 7) }
-
-            when(val currentWeather = currentWeatherResponse.await()) {
-                is Result.Success -> {
-                    _mainScreenState.update {
-                        it.copy(currentWeather = currentWeather.data)
-                    }
-                }
-                is Result.Failure -> {
-                    currentWeather.throwable.localizedMessage?.let {
-                        showToast(it)
+        viewModelScope.launch(Dispatchers.Default) {
+            val networkCheckerJob = viewModelScope.launch {
+                if (!networkChecker.isConnected) {
+                    networkChecker.networkState.collect { state ->
+                        when (state) {
+                            NetworkState.Connected -> cancel()
+                            NetworkState.Disconnected -> null
+                        }
                     }
                 }
             }
+            networkCheckerJob.join()
 
-            when(val forecastOfDays = forecastOfDaysResponse.await()) {
-                is Result.Success -> {
-                    forecastOfDays.data.minutely15.let {
-                        val currentDateTime = LocalDateTime.now()
-                        val timeFirstIndex = it.time.indexOfFirst {
-                            it.contains("${"%02d".format(currentDateTime.hour)}:00")
+            viewModelScope.launch(Dispatchers.IO) {
+                val selectedCity = _mainScreenState.value.selectedCity!!
+
+                val currentWeatherResponse = async { openMeteo.getCurrentWeather(selectedCity.latitude, selectedCity.longitude) }
+                val forecastOfDaysResponse = async { openMeteo.getForecastOfDays(selectedCity.latitude, selectedCity.longitude) }
+                val forecastFor7DaysResponse = async { openMeteo.getForecastOfDays(selectedCity.latitude, selectedCity.longitude, 7) }
+
+                when(val currentWeather = currentWeatherResponse.await()) {
+                    is Result.Success -> {
+                        _mainScreenState.update {
+                            it.copy(currentWeather = currentWeather.data)
                         }
-                        val timeLastIndex = it.time.indexOfLast {
-                            it.contains("${"%02d".format(currentDateTime.hour)}:00")
+                    }
+                    is Result.Failure -> {
+                        currentWeather.throwable.localizedMessage?.let {
+                            showToast(it)
                         }
+                    }
+                }
 
-                        val temperatureValues = mutableListOf<Double>()
-                        val timeValues = mutableListOf<String>()
-                        for (i in 0..it.time.count() - 1) {
-                            if (i >= timeFirstIndex && i <= timeLastIndex) {
-                                val dateTime = LocalDateTime.parse(it.time[i])
+                when(val forecastOfDays = forecastOfDaysResponse.await()) {
+                    is Result.Success -> {
+                        forecastOfDays.data.minutely15.let {
+                            val currentDateTime = LocalDateTime.now()
+                            val timeFirstIndex = it.time.indexOfFirst {
+                                it.contains("${"%02d".format(currentDateTime.hour)}:00")
+                            }
+                            val timeLastIndex = it.time.indexOfLast {
+                                it.contains("${"%02d".format(currentDateTime.hour)}:00")
+                            }
 
-                                temperatureValues.add(listOf(it.temperature2m[i], it.apparentTemperature[i]).average())
-                                val dateTimeString = dateTime.format(DateTimeFormatter.ofPattern("dd.MM"))
-                                timeValues.add("$dateTimeString ${"%02d".format(dateTime.hour)}:${"%02d".format(dateTime.minute)}")
+                            val temperatureValues = mutableListOf<Double>()
+                            val timeValues = mutableListOf<String>()
+                            for (i in 0..it.time.count() - 1) {
+                                if (i >= timeFirstIndex && i <= timeLastIndex) {
+                                    val dateTime = LocalDateTime.parse(it.time[i])
+
+                                    temperatureValues.add(listOf(it.temperature2m[i], it.apparentTemperature[i]).average())
+                                    val dateTimeString = dateTime.format(DateTimeFormatter.ofPattern("dd.MM"))
+                                    timeValues.add("$dateTimeString ${"%02d".format(dateTime.hour)}:${"%02d".format(dateTime.minute)}")
+                                }
+                            }
+
+                            _mainScreenState.update { state ->
+                                state.copy(
+                                    temperatureValues = temperatureValues,
+                                    timeValues = timeValues
+                                )
                             }
                         }
+                    }
+                    is Result.Failure -> {
+                        forecastOfDays.throwable.localizedMessage?.let {
+                            showToast(it)
+                        }
+                    }
+                }
 
+                when (val response = forecastFor7DaysResponse.await()) {
+                    is Result.Success -> {
                         _mainScreenState.update { state ->
                             state.copy(
-                                temperatureValues = temperatureValues,
-                                timeValues = timeValues
+                                weather = response.data,
                             )
                         }
                     }
-                }
-                is Result.Failure -> {
-                    forecastOfDays.throwable.localizedMessage?.let {
-                        showToast(it)
+                    is Result.Failure -> {
+                        response.throwable.localizedMessage?.let {
+                            showToast(it)
+                        }
                     }
                 }
-            }
 
-            when (val response = forecastFor7DaysResponse.await()) {
-                is Result.Success -> {
-                    _mainScreenState.update { state ->
-                        state.copy(
-                            weather = response.data,
-                        )
-                    }
+                _mainScreenState.update {
+                    it.copy(isLoadingData = false)
                 }
-                is Result.Failure -> {
-                    response.throwable.localizedMessage?.let {
-                        showToast(it)
-                    }
-                }
-            }
-
-            _mainScreenState.update {
-                it.copy(isLoadingData = false)
             }
         }
     }
@@ -145,25 +166,16 @@ class WeatherViewModel(private val applicationContext: Context) : ViewModel() {
     }
 
     fun addCityToFavorites(city: City) {
-        viewModelScope.launch(Dispatchers.IO) {
-            favoritesCity.add(city)
-
-            repository.update {
-                it.copy(
-                    favoritesCity = favoritesCity
-                )
-            }
+        favoritesCity.add(city)
+        repository.update {
+            it.copy(favoritesCity = favoritesCity)
         }
     }
 
-    // TODO при удалении выделенный город остается
     fun removeFavoriteCity(city: City) {
-        viewModelScope.launch(Dispatchers.IO) {
-            favoritesCity.remove(city)
-
-            repository.update {
-                it.copy(favoritesCity = favoritesCity)
-            }
+        favoritesCity.remove(city)
+        repository.update {
+            it.copy(favoritesCity = favoritesCity)
         }
     }
 
@@ -194,7 +206,7 @@ class WeatherViewModel(private val applicationContext: Context) : ViewModel() {
     }
 
     suspend fun searchCities(query: String): List<City> {
-        return when (val response = OpenMeteo.search(query)) {
+        return when (val response = openMeteo.search(query)) {
             is Result.Success -> response.data
             is Result.Failure -> {
                 response.throwable.localizedMessage?.let {
@@ -211,7 +223,7 @@ class WeatherViewModel(private val applicationContext: Context) : ViewModel() {
         endDate: String
     ): Minutely15? {
         val city = mainScreenState.value.selectedCity ?: return null
-        val response = OpenMeteo.getForecastOfDates(
+        val response = openMeteo.getForecastOfDates(
             latitude = city.latitude,
             longitude = city.longitude,
             startDate = startDate,
