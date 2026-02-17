@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -32,9 +31,9 @@ import ru.pomidorka.weatherapp.core.api.openmeteo.entity.skipDays
 import ru.pomidorka.weatherapp.core.api.openmeteo.entity.toWeatherForDayList
 import ru.pomidorka.weatherapp.data.WeatherViewModel
 import ru.pomidorka.weatherapp.ui.Routes
-import ru.pomidorka.weatherapp.ui.components.SimpleLoadingIndicator
 import ru.pomidorka.weatherapp.ui.components.CurrentTemperatureView
 import ru.pomidorka.weatherapp.ui.components.SelectorCity
+import ru.pomidorka.weatherapp.ui.components.SimpleLoadingIndicator
 import ru.pomidorka.weatherapp.ui.components.WeatherChart
 import ru.pomidorka.weatherapp.ui.components.WeatherForDayLazyRows
 
@@ -55,7 +54,7 @@ fun MainScreen(
 ) {
     val scrollState = rememberScrollState()
     val state by viewModel.mainScreenState.collectAsState()
-    var currentWeather = state.currentWeather
+    val currentWeather = state.currentWeather
 
     Column(
         modifier = modifier
