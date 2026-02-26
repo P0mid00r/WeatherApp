@@ -11,7 +11,7 @@ data class Minutely15(
     @SerialName("apparent_temperature") val apparentTemperature: List<Double>,
     @SerialName("temperature_2m") val temperature2m: List<Double>,
     @SerialName("time") val time: List<String>,
-    @SerialName("is_day") val isDay: List<Int>,
+    @SerialName("is_day") val isDay: List<Float>,
 )
 
 fun Minutely15.skipDays(
