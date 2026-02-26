@@ -165,6 +165,7 @@ class OpenMeteo(context: Context) {
 
     fun <T> retrofit2.Response<T>.log(name: String) {
         val raw = this.raw()
+        Log.d("Cache-$name", "Url request: ${raw.request.url}")
         if (raw.cacheResponse != null) {
             Log.d("Cache-$name", "📦 Данные из кэша")
         }

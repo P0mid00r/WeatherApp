@@ -93,6 +93,7 @@ class WeatherViewModel(private val applicationContext: Context) : ViewModel() {
                     }
                     is Result.Failure -> {
                         currentWeather.throwable.localizedMessage?.let {
+                            printThrowable(currentWeather.throwable)
                             showToast(it)
                         }
                     }
@@ -131,6 +132,7 @@ class WeatherViewModel(private val applicationContext: Context) : ViewModel() {
                     }
                     is Result.Failure -> {
                         forecastOfDays.throwable.localizedMessage?.let {
+                            printThrowable(forecastOfDays.throwable)
                             showToast(it)
                         }
                     }
@@ -146,6 +148,7 @@ class WeatherViewModel(private val applicationContext: Context) : ViewModel() {
                     }
                     is Result.Failure -> {
                         response.throwable.localizedMessage?.let {
+                            printThrowable(response.throwable)
                             showToast(it)
                         }
                     }
@@ -156,6 +159,10 @@ class WeatherViewModel(private val applicationContext: Context) : ViewModel() {
                 }
             }
         }
+    }
+
+    fun printThrowable(throwable: Throwable) {
+        Log.d("WeatherViewModel", throwable.stackTraceToString())
     }
 
     fun showToast(message: String) {
