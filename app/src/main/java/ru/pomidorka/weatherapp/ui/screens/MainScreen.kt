@@ -95,7 +95,8 @@ fun MainScreen(
                         color = MaterialTheme.colorScheme.onPrimary,
                     )
                     false -> CurrentTemperatureView(
-                        currentTemperature = currentWeather?.temperature ?: 0.0f,
+                        currentTemperature = listOf(currentWeather?.temperature ?: 0f, currentWeather?.apparentTemperature ?: 0f).average().toFloat(),
+//                        currentTemperature = currentWeather?.temperature ?: 0.0f,
                         temperatureMax = currentWeather?.temperatureMax ?: 0.0f,
                         temperatureMin = currentWeather?.temperatureMin ?: 0.0f,
                         condition = currentWeather?.condition ?: "null"
