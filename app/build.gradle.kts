@@ -41,25 +41,13 @@ android {
         applicationId = "ru.pomidorka.weatherapp"
         minSdk = 26
         targetSdk = 36
-        versionCode = 11
-        versionName = "1.1"
+        versionCode = 1_1_1
+        versionName = "1.1.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary = true
         }
-
-        buildConfigField(
-            type = "String",
-            name = "WEATHER_API_TOKEN",
-            value = localProperties.getProperty("weatherApiToken")
-        )
-
-        buildConfigField(
-            type = "String",
-            name = "GISMETIO_API_TOKEN",
-            value = localProperties.getProperty("gismetioApiToken")
-        )
     }
 
     buildTypes {
