@@ -170,7 +170,7 @@ private fun WeatherForDayRow(
                             for (i in 0..it.time.count() - 1) {
                                 val dateTime = LocalDateTime.parse(it.time[i])
 
-                                temperatureList.add(listOf(it.temperature2m[i], it.apparentTemperature[i]).average())
+                                temperatureList.add(it.temperature2m[i])
                                 val dateTimeString = dateTime.format(DateTimeFormatter.ofPattern("dd.MM"))
                                 timeList.add("$dateTimeString ${"%02d".format(dateTime.hour)}:${"%02d".format(dateTime.minute)}")
                             }
@@ -192,9 +192,11 @@ private fun WeatherForDayRow(
             AnimatedContent(targetState = isLoadingChart) {
                 when(it) {
                     true -> {
-                        Box(Modifier
-                            .fillMaxSize()
-                            .padding(24.dp)) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(24.dp)
+                        ) {
                             SimpleLoadingIndicator(
                                 color = MaterialTheme.colorScheme.onPrimaryContainer,
                                 size = DpSize(70.dp, 70.dp),

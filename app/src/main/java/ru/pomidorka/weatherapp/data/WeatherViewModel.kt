@@ -116,7 +116,7 @@ class WeatherViewModel(private val applicationContext: Context) : ViewModel() {
                                 if (i >= timeFirstIndex && i <= timeLastIndex) {
                                     val dateTime = LocalDateTime.parse(it.time[i])
 
-                                    temperatureValues.add(listOf(it.temperature2m[i], it.apparentTemperature[i]).average())
+                                    temperatureValues.add(it.temperature2m[i])
                                     val dateTimeString = dateTime.format(DateTimeFormatter.ofPattern("dd.MM"))
                                     timeValues.add("$dateTimeString ${"%02d".format(dateTime.hour)}:${"%02d".format(dateTime.minute)}")
                                 }

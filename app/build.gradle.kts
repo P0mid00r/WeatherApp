@@ -41,8 +41,8 @@ android {
         applicationId = "ru.pomidorka.weatherapp"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1_1_1
-        versionName = "1.1.1"
+        versionCode = 1_1_2
+        versionName = "1.1.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
