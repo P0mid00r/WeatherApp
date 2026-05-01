@@ -28,20 +28,30 @@ enum class TimeOfDay(val value: String) {
     }
 }
 
-fun Int.codeToUrlIcon(timeOfDay: TimeOfDay): String {
+fun Int.codeToIconUrl(timeOfDay: TimeOfDay): String {
     val iconId = weatherCodeToIconCodeMap[this] ?: 113
     val timeOfDayName = timeOfDay.value
     return "https://cdn.weatherapi.com/weather/64x64/$timeOfDayName/$iconId.png"
 }
 
 @Composable
-fun Int.codeToIcon(timeOfDay: TimeOfDay): Painter {
+fun Int.codeToIconPainter(timeOfDay: TimeOfDay): Painter {
     val iconId = when(timeOfDay) {
         TimeOfDay.Day -> weatherCodeToDayIconDrawableId[this]
         TimeOfDay.Night -> weatherCodeToNightIconDrawableId[this]
     }
 
     return painterResource(iconId ?: throw IllegalArgumentException())
+}
+
+@Composable
+fun Int.codeToIconId(timeOfDay: TimeOfDay): Int {
+    val iconId = when(timeOfDay) {
+        TimeOfDay.Day -> weatherCodeToDayIconDrawableId[this]
+        TimeOfDay.Night -> weatherCodeToNightIconDrawableId[this]
+    }
+
+    return iconId ?: throw IllegalArgumentException()
 }
 
 private val weatherCodeToDayIconDrawableId = mapOf<Int, Int>(

@@ -38,7 +38,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import ru.pomidorka.weatherapp.core.api.openmeteo.entity.TimeOfDay
 import ru.pomidorka.weatherapp.core.api.openmeteo.entity.WeatherForDay
-import ru.pomidorka.weatherapp.core.api.openmeteo.entity.codeToIcon
+import ru.pomidorka.weatherapp.core.api.openmeteo.entity.codeToIconPainter
 import ru.pomidorka.weatherapp.core.api.openmeteo.entity.minutely.Minutely15
 import ru.pomidorka.weatherapp.data.WeatherViewModel
 import ru.pomidorka.weatherapp.util.getDayOfWeekName
@@ -116,7 +116,7 @@ private fun WeatherForDayRow(
         ) {
             Image(
                 modifier = modifier.size(56.dp),
-                painter = weatherForDay.weatherCode.codeToIcon(TimeOfDay.Day),
+                painter = weatherForDay.weatherCode.codeToIconPainter(TimeOfDay.Day),
                 contentDescription = null,
                 contentScale = ContentScale.Crop
             )
