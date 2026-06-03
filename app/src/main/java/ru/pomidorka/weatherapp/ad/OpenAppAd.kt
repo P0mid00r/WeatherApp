@@ -6,7 +6,7 @@ import com.yandex.mobile.ads.appopenad.AppOpenAdEventListener
 import com.yandex.mobile.ads.appopenad.AppOpenAdLoadListener
 import com.yandex.mobile.ads.appopenad.AppOpenAdLoader
 import com.yandex.mobile.ads.common.AdError
-import com.yandex.mobile.ads.common.AdRequestConfiguration
+import com.yandex.mobile.ads.common.AdRequest
 import com.yandex.mobile.ads.common.AdRequestError
 import com.yandex.mobile.ads.common.ImpressionData
 
@@ -29,7 +29,7 @@ object OpenAppAd {
         }
 
         val appOpenAdLoader = AppOpenAdLoader(activity)
-        val adRequestConfiguration = AdRequestConfiguration.Builder(ID).build()
+        val adRequest = AdRequest.Builder(ID).build()
 
         val appOpenAdLoadListener: AppOpenAdLoadListener = object : AppOpenAdLoadListener {
             override fun onAdLoaded(appOpenAd: AppOpenAd) {
@@ -57,7 +57,6 @@ object OpenAppAd {
         }
 
         mAppOpenAd?.setAdEventListener(appOpenAdEventListener)
-        appOpenAdLoader.setAdLoadListener(appOpenAdLoadListener)
-        appOpenAdLoader.loadAd(adRequestConfiguration)
+        appOpenAdLoader.loadAd(adRequest, appOpenAdLoadListener)
     }
 }

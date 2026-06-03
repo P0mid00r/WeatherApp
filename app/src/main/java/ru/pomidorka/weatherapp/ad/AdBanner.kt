@@ -34,9 +34,8 @@ private fun AdBanner(
             .background(color),
         factory = {
             val banner = BannerAdView(it).apply {
-                setAdUnitId(id)
-                setAdSize(BannerAdSize.inlineSize(context, widthBanner, 85))
-                val adRequest: AdRequest = AdRequest.Builder().build()
+                setAdSize(BannerAdSize.inline(context, widthBanner, 85))
+                val adRequest = AdRequest.Builder(id).build()
                 loadAd(adRequest)
             }
             adBannerContext?.invoke(banner)
